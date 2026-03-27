@@ -1,0 +1,279 @@
+SPIEGAZIONE COMPLETA DATABASE - SISTEMA ORDINAZIONI MULTI-TENANT
+(con descrizione di ogni attributo)
+
+========================
+1) TENANTS
+========================
+Rappresenta ogni attività.
+
+- id: identificativo univoco del tenant (PK)
+- slug: stringa URL-friendly unica usata per routing (es. lido-blue-beach)
+- name: nome commerciale dell’attività
+- business_type: tipo attività (enum logico: LIDO, BAR, RESTAURANT, NIGHTCLUB, OTHER)
+- status: stato operativo del tenant (ACTIVE, SUSPENDED, DISABLED)
+- timezone: fuso orario per gestione orari e timestamp
+- currency_code: codice valuta ISO (es. EUR)
+- subdomain: sottodominio usato per accesso (es. lido-blue-beach)
+- branding_json: configurazioni UI (colori, logo, tema)
+- opening_config_json: configurazione orari (giorni, fasce)
+- created_at: data creazione record
+- updated_at: data ultimo aggiornamento
+
+========================
+2) AREAS
+========================
+Raggruppamenti logici delle locazioni.
+
+- id: identificativo area
+- tenant_id: FK verso tenants
+- name: nome area (es. terrazza)
+- display_order: ordine visualizzazione
+- status: stato area (ACTIVE, DISABLED)
+- created_at, updated_at: timestamp
+
+========================
+3) LOCATIONS
+========================
+Unità fisiche dove si ordina.
+
+- id: identificativo locazione
+- tenant_id: FK tenant
+- area_id: FK area (opzionale)
+- type: tipo locazione (TABLE, UMBRELLA, ecc.)
+- label: nome operativo (es. Tavolo 5)
+- status: stato (ACTIVE, DISABLED)
+- capacity: numero posti (opzionale)
+- metadata_json: dati extra (posizione, note)
+- created_at, updated_at
+
+========================
+4) LOCATION_TOKENS
+========================
+Token QR associati.
+
+- id: identificativo token
+- tenant_id: FK tenant
+- location_id: FK location
+- token: stringa univoca QR
+- status: stato token (ACTIVE, REVOKED, EXPIRED)
+- is_primary: indica token principale
+- rotatable: se può essere rigenerato
+- expires_at: eventuale scadenza
+- created_at, updated_at
+
+========================
+5) CATEGORIES
+========================
+Categorie del menu tenant.
+
+- id: identificativo
+- tenant_id: FK tenant
+- name: nome categoria
+- description: descrizione opzionale
+- display_order: ordine UI
+- status: stato
+- created_at, updated_at
+
+========================
+6) GLOBAL_CATEGORIES
+========================
+Categorie condivise.
+
+- id: identificativo
+- code: codice tecnico univoco
+- name: nome categoria
+- description: descrizione
+- display_order: ordine
+- status: stato
+- created_at, updated_at
+
+========================
+7) GLOBAL_PRODUCTS
+========================
+Catalogo centrale.
+
+- id: identificativo
+- code: codice univoco
+- name: nome standard
+- description: descrizione standard
+- default_image_url: immagine default
+- default_department: reparto (BAR, KITCHEN, ecc.)
+- default_vat_rate: IVA standard
+- status: stato (ACTIVE, DISABLED)
+- metadata_json: dati extra
+- created_at, updated_at
+
+========================
+8) GLOBAL_CATEGORY_PRODUCTS
+========================
+Relazione categorie globali-prodotti.
+
+- global_category_id: FK categoria globale
+- global_product_id: FK prodotto globale
+- display_order: ordine nella categoria
+
+========================
+9) TENANT_PRODUCTS
+========================
+Prodotti venduti dal tenant.
+
+- id: identificativo
+- tenant_id: FK tenant
+- global_product_id: FK prodotto globale (opzionale)
+- sku: codice interno prodotto
+- name: nome visualizzato
+- description: descrizione
+- price: prezzo vendita
+- image_url: immagine effettiva
+- department: reparto operativo
+- vat_rate: IVA applicata
+- status: stato prodotto
+- available_for_order: se ordinabile
+- is_customized: se modificato rispetto al globale
+- metadata_json: dati extra
+- created_at, updated_at
+
+========================
+10) CATEGORY_TENANT_PRODUCTS
+========================
+Relazione categorie-prodotti tenant.
+
+- category_id: FK categoria
+- tenant_product_id: FK prodotto tenant
+- display_order: ordine nella categoria
+
+========================
+11) MODIFIER_GROUPS
+========================
+Gruppi di opzioni.
+
+- id: identificativo
+- tenant_id: FK tenant
+- name: nome gruppo (es. Extra)
+- min_selectable: minimo selezioni
+- max_selectable: massimo selezioni
+- required: obbligatorio o meno
+- status: stato
+- created_at, updated_at
+
+========================
+12) MODIFIER_OPTIONS
+========================
+Opzioni dei gruppi.
+
+- id: identificativo
+- modifier_group_id: FK gruppo
+- tenant_id: FK tenant
+- name: nome opzione
+- price_delta: variazione prezzo
+- status: stato
+- created_at, updated_at
+
+========================
+13) TENANT_PRODUCT_MODIFIER_GROUPS
+========================
+Relazione prodotti-modificatori.
+
+- tenant_product_id: FK prodotto
+- modifier_group_id: FK gruppo
+
+========================
+14) STAFF_USERS
+========================
+Utenti staff.
+
+- id: identificativo
+- tenant_id: FK tenant
+- first_name: nome
+- last_name: cognome
+- email: email login
+- password_hash: password criptata
+- status: stato utente
+- created_at, updated_at
+
+========================
+15) STAFF_ROLES
+========================
+Ruoli sistema.
+
+- id: identificativo
+- code: codice ruolo
+- description: descrizione
+
+========================
+16) STAFF_USER_ROLES
+========================
+Relazione utenti-ruoli.
+
+- staff_user_id: FK utente
+- role_id: FK ruolo
+
+========================
+17) ORDERS
+========================
+Ordini.
+
+- id: identificativo ordine
+- tenant_id: FK tenant
+- location_id: FK locazione
+- location_label_snapshot: nome locazione congelato
+- area_name_snapshot: nome area congelato
+- source: origine (QR, STAFF)
+- status: stato ordine
+- payment_status: stato pagamento
+- customer_note: nota cliente
+- internal_note: nota staff
+- subtotal_amount: subtotale
+- total_amount: totale finale
+- created_by_staff_id: chi ha creato
+- accepted_by_staff_id: chi ha accettato
+- delivered_by_staff_id: chi ha consegnato
+- accepted_at, ready_at, delivered_at: timestamp stati
+- created_at, updated_at
+
+========================
+18) ORDER_ITEMS
+========================
+Righe ordine.
+
+- id: identificativo
+- order_id: FK ordine
+- tenant_id: FK tenant
+- tenant_product_id: FK prodotto
+- product_name_snapshot: nome congelato
+- unit_price_snapshot: prezzo congelato
+- quantity: quantità
+- line_total: totale riga
+- department_snapshot: reparto congelato
+- notes: note
+- created_at, updated_at
+
+========================
+19) ORDER_ITEM_MODIFIER_OPTIONS
+========================
+Opzioni applicate.
+
+- order_item_id: FK riga ordine
+- modifier_option_id: FK opzione
+- modifier_group_name_snapshot: nome gruppo congelato
+- option_name_snapshot: nome opzione congelato
+- price_delta_snapshot: prezzo extra congelato
+
+========================
+20) ORDER_STATUS_HISTORY
+========================
+Storico stati.
+
+- id: identificativo
+- order_id: FK ordine
+- old_status: stato precedente
+- new_status: stato nuovo
+- changed_by: utente che modifica
+- changed_at: timestamp modifica
+
+========================
+NOTE FINALI
+========================
+- global_products = catalogo condiviso
+- tenant_products = catalogo reale
+- orders usano snapshot per consistenza storica
